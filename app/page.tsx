@@ -43,7 +43,10 @@ import {
   IoPlay,
   IoTime,
   IoGrid,
-  IoLinkOutline
+  IoLinkOutline,
+  IoAdd,
+  IoTrashOutline,
+  IoLayersOutline
 } from 'react-icons/io5'
 
 // ===== CONSTANTS =====
@@ -59,6 +62,7 @@ interface Categories {
 }
 
 interface OnboardingMetric {
+  source_sheet?: string
   course_name?: string
   cohort_name?: string
   eligible?: string
@@ -70,6 +74,7 @@ interface OnboardingMetric {
 }
 
 interface DashboardAccessMetric {
+  source_sheet?: string
   cohort_name?: string
   enrollments?: string
   access_removed?: string
@@ -80,6 +85,7 @@ interface DashboardAccessMetric {
 }
 
 interface AttendanceMetric {
+  source_sheet?: string
   cohort_name?: string
   active_learners?: string
   total_enrollment?: string
@@ -89,6 +95,7 @@ interface AttendanceMetric {
 }
 
 interface SessionRatingMetric {
+  source_sheet?: string
   cohort_name?: string
   average_rating?: string
   rating_count?: string
@@ -100,6 +107,7 @@ interface FlaggedIssue {
   severity?: string
   metric_category?: string
   cohort_name?: string
+  source_sheet?: string
   issue_description?: string
   recommended_action?: string
 }
@@ -110,6 +118,7 @@ interface ExecutiveSummary {
   healthy_count?: string
   at_risk_count?: string
   critical_count?: string
+  sheets_analyzed?: string
   top_priority_actions?: string[]
 }
 
@@ -122,13 +131,17 @@ interface ReportData {
   flagged_issues?: FlaggedIssue[]
 }
 
+interface SheetConfig {
+  name: string
+  sheetName: string
+  dataRange: string
+  metricType: string
+}
+
 interface Settings {
   sheetUrl: string
   sheetId: string
-  onboardingRange: string
-  enrollmentRange: string
-  attendanceRange: string
-  ratingsRange: string
+  sheets: SheetConfig[]
   onboardingThreshold: number
   accessThreshold: number
   attendanceThreshold: number
@@ -143,6 +156,7 @@ const SAMPLE_DATA: ReportData = {
     healthy_count: '6',
     at_risk_count: '4',
     critical_count: '2',
+    sheets_analyzed: '4',
     top_priority_actions: [
       'Investigate low attendance in Cohort Alpha-3 (below 55%)',
       'Follow up on 15 pending onboarding cases in Data Analytics Batch 7',
@@ -152,6 +166,7 @@ const SAMPLE_DATA: ReportData = {
   },
   onboarding_metrics: [
     {
+      source_sheet: 'Data Analytics Sheet',
       course_name: 'Data Analytics',
       cohort_name: 'DA Batch 7',
       eligible: '45',
@@ -162,6 +177,7 @@ const SAMPLE_DATA: ReportData = {
       categories: { scheduled_refund: '3', not_required: '2', not_available: '4', texted: '5', group_not_created: '1' }
     },
     {
+      source_sheet: 'Product Mgmt Sheet',
       course_name: 'Product Management',
       cohort_name: 'PM Cohort 5',
       eligible: '38',
@@ -172,6 +188,7 @@ const SAMPLE_DATA: ReportData = {
       categories: { scheduled_refund: '1', not_required: '1', not_available: '0', texted: '1', group_not_created: '0' }
     },
     {
+      source_sheet: 'UX Design Sheet',
       course_name: 'UX Design',
       cohort_name: 'UXD Cohort 2',
       eligible: '30',
@@ -182,6 +199,7 @@ const SAMPLE_DATA: ReportData = {
       categories: { scheduled_refund: '5', not_required: '2', not_available: '6', texted: '3', group_not_created: '2' }
     },
     {
+      source_sheet: 'Full Stack Sheet',
       course_name: 'Full Stack Dev',
       cohort_name: 'FSD Batch 9',
       eligible: '52',
@@ -193,31 +211,39 @@ const SAMPLE_DATA: ReportData = {
     }
   ],
   dashboard_access_metrics: [
-    { cohort_name: 'DA Batch 7', enrollments: '45', access_removed: '3', deferrals: '2', current_access: '40', access_percentage: '89%', status: 'Healthy' },
-    { cohort_name: 'PM Cohort 5', enrollments: '38', access_removed: '8', deferrals: '4', current_access: '26', access_percentage: '68%', status: 'At-Risk' },
-    { cohort_name: 'UXD Cohort 2', enrollments: '30', access_removed: '2', deferrals: '1', current_access: '27', access_percentage: '90%', status: 'Healthy' },
-    { cohort_name: 'FSD Batch 9', enrollments: '52', access_removed: '12', deferrals: '5', current_access: '35', access_percentage: '67%', status: 'Critical' }
+    { source_sheet: 'Data Analytics Sheet', cohort_name: 'DA Batch 7', enrollments: '45', access_removed: '3', deferrals: '2', current_access: '40', access_percentage: '89%', status: 'Healthy' },
+    { source_sheet: 'Product Mgmt Sheet', cohort_name: 'PM Cohort 5', enrollments: '38', access_removed: '8', deferrals: '4', current_access: '26', access_percentage: '68%', status: 'At-Risk' },
+    { source_sheet: 'UX Design Sheet', cohort_name: 'UXD Cohort 2', enrollments: '30', access_removed: '2', deferrals: '1', current_access: '27', access_percentage: '90%', status: 'Healthy' },
+    { source_sheet: 'Full Stack Sheet', cohort_name: 'FSD Batch 9', enrollments: '52', access_removed: '12', deferrals: '5', current_access: '35', access_percentage: '67%', status: 'Critical' }
   ],
   attendance_metrics: [
-    { cohort_name: 'DA Batch 7', active_learners: '32', total_enrollment: '45', attendance_percentage: '71%', trend: 'Up', status: 'Healthy' },
-    { cohort_name: 'PM Cohort 5', active_learners: '28', total_enrollment: '38', attendance_percentage: '74%', trend: 'Stable', status: 'Healthy' },
-    { cohort_name: 'UXD Cohort 2', active_learners: '15', total_enrollment: '30', attendance_percentage: '50%', trend: 'Down', status: 'Critical' },
-    { cohort_name: 'FSD Batch 9', active_learners: '36', total_enrollment: '52', attendance_percentage: '69%', trend: 'Down', status: 'At-Risk' }
+    { source_sheet: 'Data Analytics Sheet', cohort_name: 'DA Batch 7', active_learners: '32', total_enrollment: '45', attendance_percentage: '71%', trend: 'Up', status: 'Healthy' },
+    { source_sheet: 'Product Mgmt Sheet', cohort_name: 'PM Cohort 5', active_learners: '28', total_enrollment: '38', attendance_percentage: '74%', trend: 'Stable', status: 'Healthy' },
+    { source_sheet: 'UX Design Sheet', cohort_name: 'UXD Cohort 2', active_learners: '15', total_enrollment: '30', attendance_percentage: '50%', trend: 'Down', status: 'Critical' },
+    { source_sheet: 'Full Stack Sheet', cohort_name: 'FSD Batch 9', active_learners: '36', total_enrollment: '52', attendance_percentage: '69%', trend: 'Down', status: 'At-Risk' }
   ],
   session_ratings_metrics: [
-    { cohort_name: 'DA Batch 7', average_rating: '4.3', rating_count: '128', trend: 'Up', status: 'Healthy' },
-    { cohort_name: 'PM Cohort 5', average_rating: '4.6', rating_count: '95', trend: 'Stable', status: 'Healthy' },
-    { cohort_name: 'UXD Cohort 2', average_rating: '3.2', rating_count: '72', trend: 'Down', status: 'Critical' },
-    { cohort_name: 'FSD Batch 9', average_rating: '3.9', rating_count: '156', trend: 'Up', status: 'At-Risk' }
+    { source_sheet: 'Data Analytics Sheet', cohort_name: 'DA Batch 7', average_rating: '4.3', rating_count: '128', trend: 'Up', status: 'Healthy' },
+    { source_sheet: 'Product Mgmt Sheet', cohort_name: 'PM Cohort 5', average_rating: '4.6', rating_count: '95', trend: 'Stable', status: 'Healthy' },
+    { source_sheet: 'UX Design Sheet', cohort_name: 'UXD Cohort 2', average_rating: '3.2', rating_count: '72', trend: 'Down', status: 'Critical' },
+    { source_sheet: 'Full Stack Sheet', cohort_name: 'FSD Batch 9', average_rating: '3.9', rating_count: '156', trend: 'Up', status: 'At-Risk' }
   ],
   flagged_issues: [
-    { severity: 'Critical', metric_category: 'Onboarding', cohort_name: 'UXD Cohort 2', issue_description: 'Only 40% onboarding completion with 18 pending learners.', recommended_action: 'Assign dedicated onboarding coordinator and send targeted reminders.' },
-    { severity: 'Critical', metric_category: 'Attendance', cohort_name: 'UXD Cohort 2', issue_description: 'Attendance dropped to 50% with a downward trend.', recommended_action: 'Conduct 1:1 check-ins with disengaged learners and review session timing.' },
-    { severity: 'Warning', metric_category: 'Dashboard Access', cohort_name: 'PM Cohort 5', issue_description: '32% of enrolled learners have lost dashboard access.', recommended_action: 'Audit access removal reasons and restore where applicable.' },
-    { severity: 'Warning', metric_category: 'Dashboard Access', cohort_name: 'FSD Batch 9', issue_description: 'High access removal rate (23%) impacting learning continuity.', recommended_action: 'Review access removal policy and set up automatic alerts.' },
-    { severity: 'Warning', metric_category: 'Session Ratings', cohort_name: 'UXD Cohort 2', issue_description: 'Average session rating of 3.2 is below threshold.', recommended_action: 'Gather qualitative feedback and review instructor delivery methods.' }
+    { severity: 'Critical', metric_category: 'Onboarding', cohort_name: 'UXD Cohort 2', source_sheet: 'UX Design Sheet', issue_description: 'Only 40% onboarding completion with 18 pending learners.', recommended_action: 'Assign dedicated onboarding coordinator and send targeted reminders.' },
+    { severity: 'Critical', metric_category: 'Attendance', cohort_name: 'UXD Cohort 2', source_sheet: 'UX Design Sheet', issue_description: 'Attendance dropped to 50% with a downward trend.', recommended_action: 'Conduct 1:1 check-ins with disengaged learners and review session timing.' },
+    { severity: 'Warning', metric_category: 'Dashboard Access', cohort_name: 'PM Cohort 5', source_sheet: 'Product Mgmt Sheet', issue_description: '32% of enrolled learners have lost dashboard access.', recommended_action: 'Audit access removal reasons and restore where applicable.' },
+    { severity: 'Warning', metric_category: 'Dashboard Access', cohort_name: 'FSD Batch 9', source_sheet: 'Full Stack Sheet', issue_description: 'High access removal rate (23%) impacting learning continuity.', recommended_action: 'Review access removal policy and set up automatic alerts.' },
+    { severity: 'Warning', metric_category: 'Session Ratings', cohort_name: 'UXD Cohort 2', source_sheet: 'UX Design Sheet', issue_description: 'Average session rating of 3.2 is below threshold.', recommended_action: 'Gather qualitative feedback and review instructor delivery methods.' }
   ]
 }
+
+const METRIC_TYPE_OPTIONS = [
+  { value: 'onboarding', label: 'Onboarding' },
+  { value: 'enrollment', label: 'Enrollment' },
+  { value: 'attendance', label: 'Attendance' },
+  { value: 'ratings', label: 'Ratings' },
+  { value: 'mixed', label: 'Mixed' },
+]
 
 // ===== HELPERS =====
 function getStatusBadge(status?: string) {
@@ -354,6 +380,15 @@ function CategoryPills({ categories }: { categories?: Categories }) {
   )
 }
 
+function SourceSheetIndicator({ sourceSheet }: { sourceSheet?: string }) {
+  if (!sourceSheet) return null
+  return (
+    <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+      <IoDocumentText className="w-2.5 h-2.5" />{sourceSheet}
+    </p>
+  )
+}
+
 function LoadingSkeleton() {
   return (
     <div className="space-y-6 p-6">
@@ -403,10 +438,12 @@ export default function Page() {
   const [settings, setSettings] = useState<Settings>({
     sheetUrl: '',
     sheetId: '',
-    onboardingRange: 'Onboarding!A1:Z100',
-    enrollmentRange: 'Enrollment!A1:Z100',
-    attendanceRange: 'Attendance!A1:Z100',
-    ratingsRange: 'Ratings!A1:Z100',
+    sheets: [
+      { name: 'Onboarding Data', sheetName: 'Onboarding', dataRange: 'A1:Z100', metricType: 'onboarding' },
+      { name: 'Enrollment Data', sheetName: 'Enrollment', dataRange: 'A1:Z100', metricType: 'enrollment' },
+      { name: 'Attendance Data', sheetName: 'Attendance', dataRange: 'A1:Z100', metricType: 'attendance' },
+      { name: 'Ratings Data', sheetName: 'Ratings', dataRange: 'A1:Z100', metricType: 'ratings' },
+    ],
     onboardingThreshold: 80,
     accessThreshold: 75,
     attendanceThreshold: 70,
@@ -427,12 +464,38 @@ export default function Page() {
   const ratings = useMemo(() => Array.isArray(displayData?.session_ratings_metrics) ? displayData!.session_ratings_metrics : [], [displayData])
   const flaggedIssues = useMemo(() => Array.isArray(displayData?.flagged_issues) ? displayData!.flagged_issues : [], [displayData])
 
+  const handleAddSheet = useCallback(() => {
+    if (settings.sheets.length >= 10) return
+    setSettings(prev => ({
+      ...prev,
+      sheets: [...prev.sheets, { name: '', sheetName: '', dataRange: 'A1:Z100', metricType: 'mixed' }]
+    }))
+  }, [settings.sheets.length])
+
+  const handleRemoveSheet = useCallback((index: number) => {
+    setSettings(prev => ({
+      ...prev,
+      sheets: prev.sheets.filter((_, i) => i !== index)
+    }))
+  }, [])
+
+  const handleUpdateSheet = useCallback((index: number, field: keyof SheetConfig, value: string) => {
+    setSettings(prev => ({
+      ...prev,
+      sheets: prev.sheets.map((s, i) => i === index ? { ...s, [field]: value } : s)
+    }))
+  }, [])
+
   const handleGenerateReport = useCallback(async () => {
     setLoading(true)
     setError(null)
     setActiveAgentId(AGENT_ID)
 
-    const message = `Generate a comprehensive health report for all cohorts. Google Sheet URL: ${settings.sheetUrl || 'default'}. Sheet ID: ${settings.sheetId || 'default'}. Onboarding data range: ${settings.onboardingRange}. Enrollment data range: ${settings.enrollmentRange}. Attendance data range: ${settings.attendanceRange}. Ratings data range: ${settings.ratingsRange}. Thresholds: Onboarding ${settings.onboardingThreshold}%, Access ${settings.accessThreshold}%, Attendance ${settings.attendanceThreshold}%, Rating ${settings.ratingThreshold}/5`
+    const sheetsInfo = settings.sheets.map((s, i) =>
+      `Sheet ${i + 1}: Name="${s.name}", Tab="${s.sheetName}", Range="${s.dataRange}", Type="${s.metricType}"`
+    ).join('. ')
+
+    const message = `Generate a comprehensive health report for all cohorts. Google Sheet URL: ${settings.sheetUrl || 'default'}. Sheet ID: ${settings.sheetId || 'default'}. Number of sheets: ${settings.sheets.length}. ${sheetsInfo}. Thresholds: Onboarding ${settings.onboardingThreshold}%, Access ${settings.accessThreshold}%, Attendance ${settings.attendanceThreshold}%, Rating ${settings.ratingThreshold}/5`
 
     try {
       const result = await callAIAgent(message, AGENT_ID)
@@ -565,11 +628,12 @@ export default function Page() {
                 {hasData && summary ? (
                   <>
                     {/* Summary Stats */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                       <StatCard icon={IoPeople} label="Total Cohorts" value={summary?.total_cohorts ?? '-'} variant="default" />
                       <StatCard icon={IoCheckmarkCircle} label="Healthy" value={summary?.healthy_count ?? '-'} sub="Meeting all thresholds" variant="success" />
                       <StatCard icon={IoWarning} label="At-Risk" value={summary?.at_risk_count ?? '-'} sub="Needs attention" variant="warning" />
                       <StatCard icon={IoAlertCircle} label="Critical" value={summary?.critical_count ?? '-'} sub="Immediate action required" variant="danger" />
+                      <StatCard icon={IoLayersOutline} label="Sheets Analyzed" value={summary?.sheets_analyzed ?? '-'} sub="Data sources" variant="default" />
                     </div>
 
                     {/* Health Score */}
@@ -614,6 +678,7 @@ export default function Page() {
                                       <div>
                                         <CardTitle className="text-sm font-semibold">{item?.cohort_name ?? 'Unknown'}</CardTitle>
                                         <CardDescription className="text-xs">{item?.course_name ?? ''}</CardDescription>
+                                        <SourceSheetIndicator sourceSheet={item?.source_sheet} />
                                       </div>
                                       <Badge variant="outline" className={cn('text-[10px] gap-1', statusInfo.className)}>
                                         <StatusIcon className="w-3 h-3" />
@@ -665,7 +730,10 @@ export default function Page() {
                                 <Card key={idx} className="overflow-hidden transition-all duration-300 hover:shadow-md">
                                   <CardHeader className="pb-3">
                                     <div className="flex items-start justify-between">
-                                      <CardTitle className="text-sm font-semibold">{item?.cohort_name ?? 'Unknown'}</CardTitle>
+                                      <div>
+                                        <CardTitle className="text-sm font-semibold">{item?.cohort_name ?? 'Unknown'}</CardTitle>
+                                        <SourceSheetIndicator sourceSheet={item?.source_sheet} />
+                                      </div>
                                       <Badge variant="outline" className={cn('text-[10px] gap-1', statusInfo.className)}>
                                         <StatusIcon className="w-3 h-3" />
                                         {statusInfo.label}
@@ -718,7 +786,10 @@ export default function Page() {
                                 <Card key={idx} className="overflow-hidden transition-all duration-300 hover:shadow-md">
                                   <CardHeader className="pb-3">
                                     <div className="flex items-start justify-between">
-                                      <CardTitle className="text-sm font-semibold">{item?.cohort_name ?? 'Unknown'}</CardTitle>
+                                      <div>
+                                        <CardTitle className="text-sm font-semibold">{item?.cohort_name ?? 'Unknown'}</CardTitle>
+                                        <SourceSheetIndicator sourceSheet={item?.source_sheet} />
+                                      </div>
                                       <div className="flex items-center gap-2">
                                         <span className={cn('flex items-center gap-1 text-xs font-medium', trendInfo.className)}>
                                           <TrendIcon className="w-3.5 h-3.5" />
@@ -772,7 +843,10 @@ export default function Page() {
                                 <Card key={idx} className="overflow-hidden transition-all duration-300 hover:shadow-md">
                                   <CardHeader className="pb-3">
                                     <div className="flex items-start justify-between">
-                                      <CardTitle className="text-sm font-semibold">{item?.cohort_name ?? 'Unknown'}</CardTitle>
+                                      <div>
+                                        <CardTitle className="text-sm font-semibold">{item?.cohort_name ?? 'Unknown'}</CardTitle>
+                                        <SourceSheetIndicator sourceSheet={item?.source_sheet} />
+                                      </div>
                                       <Badge variant="outline" className={cn('text-[10px] gap-1', statusInfo.className)}>
                                         <StatusIcon className="w-3 h-3" />
                                         {statusInfo.label}
@@ -832,6 +906,9 @@ export default function Page() {
                                         <Badge variant="outline" className={cn('text-[10px]', sevInfo.className)}>{sevInfo.label}</Badge>
                                         <Badge variant="secondary" className="text-[10px]">{issue?.metric_category ?? 'General'}</Badge>
                                         <span className="text-xs font-medium text-foreground">{issue?.cohort_name ?? ''}</span>
+                                        {issue?.source_sheet && (
+                                          <Badge variant="secondary" className="text-[10px]">{issue.source_sheet}</Badge>
+                                        )}
                                       </div>
                                     </div>
                                     <p className="text-sm text-foreground">{issue?.issue_description ?? ''}</p>
@@ -878,7 +955,7 @@ export default function Page() {
                           </div>
                           <h3 className="text-base font-bold">Executive Summary</h3>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-5">
+                        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-5">
                           <div className="text-center p-3 rounded-xl bg-card border border-border">
                             <p className="text-2xl font-bold text-primary">{summary?.overall_health_score ?? '-'}</p>
                             <p className="text-[10px] text-muted-foreground mt-1">Health Score</p>
@@ -898,6 +975,10 @@ export default function Page() {
                           <div className="text-center p-3 rounded-xl bg-red-50 border border-red-200">
                             <p className="text-2xl font-bold text-red-700">{summary?.critical_count ?? '-'}</p>
                             <p className="text-[10px] text-red-600 mt-1">Critical</p>
+                          </div>
+                          <div className="text-center p-3 rounded-xl bg-card border border-border">
+                            <p className="text-2xl font-bold">{summary?.sheets_analyzed ?? '-'}</p>
+                            <p className="text-[10px] text-muted-foreground mt-1">Sheets Analyzed</p>
                           </div>
                         </div>
                         {Array.isArray(summary?.top_priority_actions) && summary.top_priority_actions.length > 0 && (
@@ -929,6 +1010,7 @@ export default function Page() {
                                 <TableRow>
                                   <TableHead className="text-xs">Course</TableHead>
                                   <TableHead className="text-xs">Cohort</TableHead>
+                                  <TableHead className="text-xs">Source</TableHead>
                                   <TableHead className="text-xs text-center">Eligible</TableHead>
                                   <TableHead className="text-xs text-center">Done</TableHead>
                                   <TableHead className="text-xs text-center">Pending</TableHead>
@@ -944,6 +1026,7 @@ export default function Page() {
                                     <TableRow key={idx}>
                                       <TableCell className="text-xs font-medium">{item?.course_name ?? '-'}</TableCell>
                                       <TableCell className="text-xs">{item?.cohort_name ?? '-'}</TableCell>
+                                      <TableCell className="text-xs text-muted-foreground">{item?.source_sheet ?? '-'}</TableCell>
                                       <TableCell className="text-xs text-center">{item?.eligible ?? '-'}</TableCell>
                                       <TableCell className="text-xs text-center font-medium text-emerald-700">{item?.done ?? '-'}</TableCell>
                                       <TableCell className="text-xs text-center font-medium text-amber-700">{item?.pending ?? '-'}</TableCell>
@@ -982,6 +1065,7 @@ export default function Page() {
                               <TableHeader>
                                 <TableRow>
                                   <TableHead className="text-xs">Cohort</TableHead>
+                                  <TableHead className="text-xs">Source</TableHead>
                                   <TableHead className="text-xs text-center">Enrollments</TableHead>
                                   <TableHead className="text-xs text-center">Removed</TableHead>
                                   <TableHead className="text-xs text-center">Deferrals</TableHead>
@@ -996,6 +1080,7 @@ export default function Page() {
                                   return (
                                     <TableRow key={idx}>
                                       <TableCell className="text-xs font-medium">{item?.cohort_name ?? '-'}</TableCell>
+                                      <TableCell className="text-xs text-muted-foreground">{item?.source_sheet ?? '-'}</TableCell>
                                       <TableCell className="text-xs text-center">{item?.enrollments ?? '-'}</TableCell>
                                       <TableCell className="text-xs text-center text-red-600">{item?.access_removed ?? '-'}</TableCell>
                                       <TableCell className="text-xs text-center text-yellow-600">{item?.deferrals ?? '-'}</TableCell>
@@ -1026,6 +1111,7 @@ export default function Page() {
                               <TableHeader>
                                 <TableRow>
                                   <TableHead className="text-xs">Cohort</TableHead>
+                                  <TableHead className="text-xs">Source</TableHead>
                                   <TableHead className="text-xs text-center">Active Learners</TableHead>
                                   <TableHead className="text-xs text-center">Total Enrolled</TableHead>
                                   <TableHead className="text-xs text-center">Attendance %</TableHead>
@@ -1041,6 +1127,7 @@ export default function Page() {
                                   return (
                                     <TableRow key={idx}>
                                       <TableCell className="text-xs font-medium">{item?.cohort_name ?? '-'}</TableCell>
+                                      <TableCell className="text-xs text-muted-foreground">{item?.source_sheet ?? '-'}</TableCell>
                                       <TableCell className="text-xs text-center">{item?.active_learners ?? '-'}</TableCell>
                                       <TableCell className="text-xs text-center">{item?.total_enrollment ?? '-'}</TableCell>
                                       <TableCell className="text-xs text-center font-semibold">{item?.attendance_percentage ?? '-'}</TableCell>
@@ -1075,6 +1162,7 @@ export default function Page() {
                               <TableHeader>
                                 <TableRow>
                                   <TableHead className="text-xs">Cohort</TableHead>
+                                  <TableHead className="text-xs">Source</TableHead>
                                   <TableHead className="text-xs text-center">Avg Rating</TableHead>
                                   <TableHead className="text-xs text-center">Stars</TableHead>
                                   <TableHead className="text-xs text-center">Rating Count</TableHead>
@@ -1090,6 +1178,7 @@ export default function Page() {
                                   return (
                                     <TableRow key={idx}>
                                       <TableCell className="text-xs font-medium">{item?.cohort_name ?? '-'}</TableCell>
+                                      <TableCell className="text-xs text-muted-foreground">{item?.source_sheet ?? '-'}</TableCell>
                                       <TableCell className="text-xs text-center font-semibold">{item?.average_rating ?? '-'}</TableCell>
                                       <TableCell className="text-center"><div className="flex justify-center">{renderStars(item?.average_rating)}</div></TableCell>
                                       <TableCell className="text-xs text-center">{item?.rating_count ?? '-'}</TableCell>
@@ -1111,6 +1200,43 @@ export default function Page() {
                         </CardContent>
                       </Card>
                     )}
+
+                    {/* Flagged Issues in Report */}
+                    {flaggedIssues.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <div className="flex items-center gap-2">
+                            <IoFlag className="w-4 h-4 text-destructive" />
+                            <CardTitle className="text-sm font-semibold">Flagged Issues</CardTitle>
+                            <Badge variant="secondary" className="text-[10px]">{flaggedIssues.length}</Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {flaggedIssues.map((issue, idx) => {
+                            const sevInfo = getSeverityBadge(issue?.severity)
+                            return (
+                              <div key={idx} className="p-4 rounded-xl border border-border bg-background/50 space-y-2">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <Badge variant="outline" className={cn('text-[10px]', sevInfo.className)}>{sevInfo.label}</Badge>
+                                    <Badge variant="secondary" className="text-[10px]">{issue?.metric_category ?? 'General'}</Badge>
+                                    <span className="text-xs font-medium text-foreground">{issue?.cohort_name ?? ''}</span>
+                                    {issue?.source_sheet && (
+                                      <Badge variant="secondary" className="text-[10px]">{issue.source_sheet}</Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                <p className="text-sm text-foreground">{issue?.issue_description ?? ''}</p>
+                                <div className="flex items-start gap-2 p-2.5 rounded-lg bg-primary/5">
+                                  <IoCheckmarkCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                                  <p className="text-xs text-foreground/80">{issue?.recommended_action ?? ''}</p>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 )}
               </>
@@ -1118,7 +1244,7 @@ export default function Page() {
 
             {/* SETTINGS PAGE */}
             {!loading && activePage === 'settings' && (
-              <div className="max-w-2xl mx-auto space-y-6">
+              <div className="max-w-3xl mx-auto space-y-6">
                 {/* Google Sheet Connection */}
                 <Card>
                   <CardHeader>
@@ -1134,26 +1260,67 @@ export default function Page() {
                       <Label htmlFor="sheet-id" className="text-xs font-medium">Sheet ID</Label>
                       <Input id="sheet-id" placeholder="e.g., 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" value={settings.sheetId} onChange={(e) => setSettings(prev => ({ ...prev, sheetId: e.target.value }))} />
                     </div>
-                    <Separator />
-                    <p className="text-xs font-semibold text-muted-foreground">Data Ranges</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="range-onboarding" className="text-[11px]">Onboarding Range</Label>
-                        <Input id="range-onboarding" className="h-8 text-xs" value={settings.onboardingRange} onChange={(e) => setSettings(prev => ({ ...prev, onboardingRange: e.target.value }))} />
+                  </CardContent>
+                </Card>
+
+                {/* Sheet Configurations */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-sm font-semibold flex items-center gap-2"><IoLayersOutline className="w-4 h-4 text-primary" />Sheet Configurations</CardTitle>
+                        <CardDescription className="text-xs mt-1">Configure up to 10 sheets for multi-source data analysis.</CardDescription>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="range-enrollment" className="text-[11px]">Enrollment Range</Label>
-                        <Input id="range-enrollment" className="h-8 text-xs" value={settings.enrollmentRange} onChange={(e) => setSettings(prev => ({ ...prev, enrollmentRange: e.target.value }))} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="range-attendance" className="text-[11px]">Attendance Range</Label>
-                        <Input id="range-attendance" className="h-8 text-xs" value={settings.attendanceRange} onChange={(e) => setSettings(prev => ({ ...prev, attendanceRange: e.target.value }))} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="range-ratings" className="text-[11px]">Ratings Range</Label>
-                        <Input id="range-ratings" className="h-8 text-xs" value={settings.ratingsRange} onChange={(e) => setSettings(prev => ({ ...prev, ratingsRange: e.target.value }))} />
-                      </div>
+                      <Badge variant="secondary" className="text-xs">{settings.sheets.length} of 10 sheets configured</Badge>
                     </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {Array.isArray(settings.sheets) && settings.sheets.map((sheet, index) => (
+                      <div key={index} className="p-4 rounded-xl border border-border bg-background/50 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-[11px] font-bold flex items-center justify-center">{index + 1}</span>
+                            <span className="text-sm font-semibold text-foreground">{sheet.name || `Sheet ${index + 1}`}</span>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => handleRemoveSheet(index)} className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive">
+                            <IoTrashOutline className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-[11px] text-muted-foreground">Name</Label>
+                            <Input className="h-8 text-xs" placeholder="e.g., Onboarding Data" value={sheet.name} onChange={(e) => handleUpdateSheet(index, 'name', e.target.value)} />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[11px] text-muted-foreground">Tab Name</Label>
+                            <Input className="h-8 text-xs" placeholder="e.g., Sheet1" value={sheet.sheetName} onChange={(e) => handleUpdateSheet(index, 'sheetName', e.target.value)} />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[11px] text-muted-foreground">Data Range</Label>
+                            <Input className="h-8 text-xs" placeholder="e.g., A1:Z100" value={sheet.dataRange} onChange={(e) => handleUpdateSheet(index, 'dataRange', e.target.value)} />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[11px] text-muted-foreground">Metric Type</Label>
+                            <select className="h-8 w-full text-xs rounded-lg border border-input bg-background px-2 text-foreground focus:outline-none focus:ring-2 focus:ring-ring" value={sheet.metricType} onChange={(e) => handleUpdateSheet(index, 'metricType', e.target.value)}>
+                              {METRIC_TYPE_OPTIONS.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {settings.sheets.length < 10 && (
+                      <Button variant="outline" onClick={handleAddSheet} className="w-full gap-2 border-dashed">
+                        <IoAdd className="w-4 h-4" />
+                        Add Sheet
+                      </Button>
+                    )}
+
+                    {settings.sheets.length >= 10 && (
+                      <p className="text-xs text-muted-foreground text-center py-2">Maximum of 10 sheets reached.</p>
+                    )}
                   </CardContent>
                 </Card>
 

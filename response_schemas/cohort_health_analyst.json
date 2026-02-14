@@ -15,12 +15,13 @@
           "healthy_count": { "type": "string" },
           "at_risk_count": { "type": "string" },
           "critical_count": { "type": "string" },
+          "sheets_analyzed": { "type": "string" },
           "top_priority_actions": {
             "type": "array",
             "items": { "type": "string" }
           }
         },
-        "required": ["overall_health_score", "total_cohorts", "healthy_count", "at_risk_count", "critical_count", "top_priority_actions"],
+        "required": ["overall_health_score", "total_cohorts", "healthy_count", "at_risk_count", "critical_count", "sheets_analyzed", "top_priority_actions"],
         "additionalProperties": false
       },
       "onboarding_metrics": {
@@ -28,6 +29,7 @@
         "items": {
           "type": "object",
           "properties": {
+            "source_sheet": { "type": "string" },
             "course_name": { "type": "string" },
             "cohort_name": { "type": "string" },
             "eligible": { "type": "string" },
@@ -48,7 +50,7 @@
               "additionalProperties": false
             }
           },
-          "required": ["course_name", "cohort_name", "eligible", "done", "pending", "completion_percentage", "status", "categories"],
+          "required": ["source_sheet", "course_name", "cohort_name", "eligible", "done", "pending", "completion_percentage", "status", "categories"],
           "additionalProperties": false
         }
       },
@@ -57,6 +59,7 @@
         "items": {
           "type": "object",
           "properties": {
+            "source_sheet": { "type": "string" },
             "cohort_name": { "type": "string" },
             "enrollments": { "type": "string" },
             "access_removed": { "type": "string" },
@@ -65,7 +68,7 @@
             "access_percentage": { "type": "string" },
             "status": { "type": "string" }
           },
-          "required": ["cohort_name", "enrollments", "access_removed", "deferrals", "current_access", "access_percentage", "status"],
+          "required": ["source_sheet", "cohort_name", "enrollments", "access_removed", "deferrals", "current_access", "access_percentage", "status"],
           "additionalProperties": false
         }
       },
@@ -74,6 +77,7 @@
         "items": {
           "type": "object",
           "properties": {
+            "source_sheet": { "type": "string" },
             "cohort_name": { "type": "string" },
             "active_learners": { "type": "string" },
             "total_enrollment": { "type": "string" },
@@ -81,7 +85,7 @@
             "trend": { "type": "string" },
             "status": { "type": "string" }
           },
-          "required": ["cohort_name", "active_learners", "total_enrollment", "attendance_percentage", "trend", "status"],
+          "required": ["source_sheet", "cohort_name", "active_learners", "total_enrollment", "attendance_percentage", "trend", "status"],
           "additionalProperties": false
         }
       },
@@ -90,13 +94,14 @@
         "items": {
           "type": "object",
           "properties": {
+            "source_sheet": { "type": "string" },
             "cohort_name": { "type": "string" },
             "average_rating": { "type": "string" },
             "rating_count": { "type": "string" },
             "trend": { "type": "string" },
             "status": { "type": "string" }
           },
-          "required": ["cohort_name", "average_rating", "rating_count", "trend", "status"],
+          "required": ["source_sheet", "cohort_name", "average_rating", "rating_count", "trend", "status"],
           "additionalProperties": false
         }
       },
@@ -108,10 +113,11 @@
             "severity": { "type": "string" },
             "metric_category": { "type": "string" },
             "cohort_name": { "type": "string" },
+            "source_sheet": { "type": "string" },
             "issue_description": { "type": "string" },
             "recommended_action": { "type": "string" }
           },
-          "required": ["severity", "metric_category", "cohort_name", "issue_description", "recommended_action"],
+          "required": ["severity", "metric_category", "cohort_name", "source_sheet", "issue_description", "recommended_action"],
           "additionalProperties": false
         }
       }
