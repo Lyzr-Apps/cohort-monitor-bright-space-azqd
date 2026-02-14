@@ -1,0 +1,32 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "type": "Input",
+      "label": "User Request",
+      "nodeCategory": "input"
+    },
+    {
+      "id": "cohort_health_analyst",
+      "type": "Agent",
+      "label": "Cohort Health Analyst Agent",
+      "nodeCategory": "agent"
+    },
+    {
+      "id": "output_node",
+      "type": "Output",
+      "label": "Health Report",
+      "nodeCategory": "end"
+    }
+  ],
+  "edges": [
+    {
+      "source": "input_node",
+      "target": "cohort_health_analyst"
+    },
+    {
+      "source": "cohort_health_analyst",
+      "target": "output_node"
+    }
+  ]
+}

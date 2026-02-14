@@ -1,0 +1,122 @@
+{
+  "agent_name": "Cohort Health Analyst Agent",
+  "agent_id": "6990d68ac0b1a6844486b48c",
+  "agent_type": "json",
+  "accessor": "json",
+  "has_module_outputs": false,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "executive_summary": {
+        "type": "object",
+        "properties": {
+          "overall_health_score": { "type": "string" },
+          "total_cohorts": { "type": "string" },
+          "healthy_count": { "type": "string" },
+          "at_risk_count": { "type": "string" },
+          "critical_count": { "type": "string" },
+          "top_priority_actions": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["overall_health_score", "total_cohorts", "healthy_count", "at_risk_count", "critical_count", "top_priority_actions"],
+        "additionalProperties": false
+      },
+      "onboarding_metrics": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "course_name": { "type": "string" },
+            "cohort_name": { "type": "string" },
+            "eligible": { "type": "string" },
+            "done": { "type": "string" },
+            "pending": { "type": "string" },
+            "completion_percentage": { "type": "string" },
+            "status": { "type": "string" },
+            "categories": {
+              "type": "object",
+              "properties": {
+                "scheduled_refund": { "type": "string" },
+                "not_required": { "type": "string" },
+                "not_available": { "type": "string" },
+                "texted": { "type": "string" },
+                "group_not_created": { "type": "string" }
+              },
+              "required": ["scheduled_refund", "not_required", "not_available", "texted", "group_not_created"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["course_name", "cohort_name", "eligible", "done", "pending", "completion_percentage", "status", "categories"],
+          "additionalProperties": false
+        }
+      },
+      "dashboard_access_metrics": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "cohort_name": { "type": "string" },
+            "enrollments": { "type": "string" },
+            "access_removed": { "type": "string" },
+            "deferrals": { "type": "string" },
+            "current_access": { "type": "string" },
+            "access_percentage": { "type": "string" },
+            "status": { "type": "string" }
+          },
+          "required": ["cohort_name", "enrollments", "access_removed", "deferrals", "current_access", "access_percentage", "status"],
+          "additionalProperties": false
+        }
+      },
+      "attendance_metrics": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "cohort_name": { "type": "string" },
+            "active_learners": { "type": "string" },
+            "total_enrollment": { "type": "string" },
+            "attendance_percentage": { "type": "string" },
+            "trend": { "type": "string" },
+            "status": { "type": "string" }
+          },
+          "required": ["cohort_name", "active_learners", "total_enrollment", "attendance_percentage", "trend", "status"],
+          "additionalProperties": false
+        }
+      },
+      "session_ratings_metrics": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "cohort_name": { "type": "string" },
+            "average_rating": { "type": "string" },
+            "rating_count": { "type": "string" },
+            "trend": { "type": "string" },
+            "status": { "type": "string" }
+          },
+          "required": ["cohort_name", "average_rating", "rating_count", "trend", "status"],
+          "additionalProperties": false
+        }
+      },
+      "flagged_issues": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "severity": { "type": "string" },
+            "metric_category": { "type": "string" },
+            "cohort_name": { "type": "string" },
+            "issue_description": { "type": "string" },
+            "recommended_action": { "type": "string" }
+          },
+          "required": ["severity", "metric_category", "cohort_name", "issue_description", "recommended_action"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": ["executive_summary", "onboarding_metrics", "dashboard_access_metrics", "attendance_metrics", "session_ratings_metrics", "flagged_issues"],
+    "additionalProperties": false
+  }
+}

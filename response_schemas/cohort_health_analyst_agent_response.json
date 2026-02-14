@@ -1,0 +1,146 @@
+{
+  "agent_name": "Cohort Health Analyst Agent",
+  "agent_id": "6990d68ac0b1a6844486b48c",
+  "description": "Fetches cohort data from Google Sheets, analyzes four key metrics (onboarding stats, dashboard access, attendance rates, session ratings), identifies at-risk cohorts, and generates comprehensive health reports with flagged issues.",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "executive_summary": {
+      "overall_health_score": "string",
+      "total_cohorts": "string",
+      "healthy_count": "string",
+      "at_risk_count": "string",
+      "critical_count": "string",
+      "top_priority_actions": [
+        "string"
+      ]
+    },
+    "onboarding_metrics": [
+      {
+        "course_name": "string",
+        "cohort_name": "string",
+        "eligible": "string",
+        "done": "string",
+        "pending": "string",
+        "completion_percentage": "string",
+        "status": "string",
+        "categories": {
+          "scheduled_refund": "string",
+          "not_required": "string",
+          "not_available": "string",
+          "texted": "string",
+          "group_not_created": "string"
+        }
+      }
+    ],
+    "dashboard_access_metrics": [
+      {
+        "cohort_name": "string",
+        "enrollments": "string",
+        "access_removed": "string",
+        "deferrals": "string",
+        "current_access": "string",
+        "access_percentage": "string",
+        "status": "string"
+      }
+    ],
+    "attendance_metrics": [
+      {
+        "cohort_name": "string",
+        "active_learners": "string",
+        "total_enrollment": "string",
+        "attendance_percentage": "string",
+        "trend": "string",
+        "status": "string"
+      }
+    ],
+    "session_ratings_metrics": [
+      {
+        "cohort_name": "string",
+        "average_rating": "string",
+        "rating_count": "string",
+        "trend": "string",
+        "status": "string"
+      }
+    ],
+    "flagged_issues": [
+      {
+        "severity": "string",
+        "metric_category": "string",
+        "cohort_name": "string",
+        "issue_description": "string",
+        "recommended_action": "string"
+      }
+    ]
+  },
+  "example_response": {
+    "executive_summary": {
+      "overall_health_score": "sample string",
+      "total_cohorts": "sample string",
+      "healthy_count": "sample string",
+      "at_risk_count": "sample string",
+      "critical_count": "sample string",
+      "top_priority_actions": [
+        "sample string"
+      ]
+    },
+    "onboarding_metrics": [
+      {
+        "course_name": "sample string",
+        "cohort_name": "sample string",
+        "eligible": "sample string",
+        "done": "sample string",
+        "pending": "sample string",
+        "completion_percentage": "sample string",
+        "status": "sample string",
+        "categories": {
+          "scheduled_refund": "sample string",
+          "not_required": "sample string",
+          "not_available": "sample string",
+          "texted": "sample string",
+          "group_not_created": "sample string"
+        }
+      }
+    ],
+    "dashboard_access_metrics": [
+      {
+        "cohort_name": "sample string",
+        "enrollments": "sample string",
+        "access_removed": "sample string",
+        "deferrals": "sample string",
+        "current_access": "sample string",
+        "access_percentage": "sample string",
+        "status": "sample string"
+      }
+    ],
+    "attendance_metrics": [
+      {
+        "cohort_name": "sample string",
+        "active_learners": "sample string",
+        "total_enrollment": "sample string",
+        "attendance_percentage": "sample string",
+        "trend": "sample string",
+        "status": "sample string"
+      }
+    ],
+    "session_ratings_metrics": [
+      {
+        "cohort_name": "sample string",
+        "average_rating": "sample string",
+        "rating_count": "sample string",
+        "trend": "sample string",
+        "status": "sample string"
+      }
+    ],
+    "flagged_issues": [
+      {
+        "severity": "sample string",
+        "metric_category": "sample string",
+        "cohort_name": "sample string",
+        "issue_description": "sample string",
+        "recommended_action": "sample string"
+      }
+    ]
+  }
+}
