@@ -486,16 +486,45 @@ export default function Page() {
     }))
   }, [])
 
+  const extractSpreadsheetId = useCallback((url: string): string => {
+    if (!url) return ''
+    const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)
+    return match ? match[1] : url
+  }, [])
+
   const handleGenerateReport = useCallback(async () => {
+    const spreadsheetId = settings.sheetId || extractSpreadsheetId(settings.sheetUrl)
+
+    if (!spreadsheetId) {
+      setError('Please provide a Google Sheet URL or Sheet ID in Settings before generating a report.')
+      return
+    }
+
     setLoading(true)
     setError(null)
     setActiveAgentId(AGENT_ID)
 
-    const sheetsInfo = settings.sheets.map((s, i) =>
-      `Sheet ${i + 1}: Name="${s.name}", Tab="${s.sheetName}", Range="${s.dataRange}", Type="${s.metricType}"`
-    ).join('. ')
+    const sheetTabs = settings.sheets
+      .filter(s => s.sheetName.trim())
+      .map((s, i) => `  Tab ${i + 1}: tab_name="${s.sheetName}", range="${s.dataRange}", metric_type="${s.metricType}", label="${s.name}"`)
+      .join('\n')
 
-    const message = `Generate a comprehensive health report for all cohorts. Google Sheet URL: ${settings.sheetUrl || 'default'}. Sheet ID: ${settings.sheetId || 'default'}. Number of sheets: ${settings.sheets.length}. ${sheetsInfo}. Thresholds: Onboarding ${settings.onboardingThreshold}%, Access ${settings.accessThreshold}%, Attendance ${settings.attendanceThreshold}%, Rating ${settings.ratingThreshold}/5`
+    const message = `READ DATA from the following Google Spreadsheet and generate a health report.
+
+Spreadsheet ID: ${spreadsheetId}
+
+Use GOOGLESHEETS_BATCH_GET to read data from each of these tabs:
+${sheetTabs}
+
+Total tabs to read: ${settings.sheets.filter(s => s.sheetName.trim()).length}
+
+Health Thresholds for classification:
+- Onboarding completion threshold: ${settings.onboardingThreshold}%
+- Dashboard access threshold: ${settings.accessThreshold}%
+- Attendance threshold: ${settings.attendanceThreshold}%
+- Session rating threshold: ${settings.ratingThreshold}/5
+
+IMPORTANT: You MUST use the Google Sheets tool to fetch the ACTUAL data from the spreadsheet. Do NOT generate or fabricate any data. Read each tab, extract the real values, and analyze them.`
 
     try {
       const result = await callAIAgent(message, AGENT_ID)
@@ -515,7 +544,7 @@ export default function Page() {
       setLoading(false)
       setActiveAgentId(null)
     }
-  }, [settings])
+  }, [settings, extractSpreadsheetId])
 
   const handleSaveSettings = useCallback(() => {
     setSettingsSaved(true)
@@ -1254,11 +1283,26 @@ export default function Page() {
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="sheet-url" className="text-xs font-medium">Sheet URL</Label>
-                      <Input id="sheet-url" placeholder="https://docs.google.com/spreadsheets/d/..." value={settings.sheetUrl} onChange={(e) => setSettings(prev => ({ ...prev, sheetUrl: e.target.value }))} />
+                      <Input id="sheet-url" placeholder="https://docs.google.com/spreadsheets/d/..." value={settings.sheetUrl} onChange={(e) => {
+                        const url = e.target.value
+                        const idMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)
+                        setSettings(prev => ({
+                          ...prev,
+                          sheetUrl: url,
+                          sheetId: idMatch ? idMatch[1] : prev.sheetId
+                        }))
+                      }} />
+                      <p className="text-[10px] text-muted-foreground">Paste the full Google Sheets URL. The Spreadsheet ID will be auto-extracted.</p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="sheet-id" className="text-xs font-medium">Sheet ID</Label>
+                      <Label htmlFor="sheet-id" className="text-xs font-medium">Spreadsheet ID (auto-extracted or manual)</Label>
                       <Input id="sheet-id" placeholder="e.g., 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" value={settings.sheetId} onChange={(e) => setSettings(prev => ({ ...prev, sheetId: e.target.value }))} />
+                      {!settings.sheetId && !settings.sheetUrl && (
+                        <p className="text-[10px] text-destructive flex items-center gap-1"><IoAlertCircle className="w-3 h-3" />Required: Enter a Sheet URL or Spreadsheet ID to fetch real data.</p>
+                      )}
+                      {settings.sheetId && (
+                        <p className="text-[10px] text-emerald-600 flex items-center gap-1"><IoCheckmarkCircle className="w-3 h-3" />Spreadsheet ID: {settings.sheetId}</p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
