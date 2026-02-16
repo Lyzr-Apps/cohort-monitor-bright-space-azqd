@@ -149,8 +149,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const finalUserId = user_id || `user-${generateUUID()}`
-    const finalSessionId = session_id || `${agent_id}-${generateUUID().substring(0, 12)}`
+    // CRITICAL: Use a stable user_id and session_id so Composio OAuth tool
+    // integrations (e.g. Google Sheets) can maintain authenticated sessions.
+    // Random IDs on every call break OAuth continuity.
+    const finalUserId = user_id || 'user-cohort-health-monitor'
+    const finalSessionId = session_id || `session-${agent_id}`
 
     const payload: Record<string, any> = {
       message,

@@ -51,6 +51,8 @@ import {
 
 // ===== CONSTANTS =====
 const AGENT_ID = '6990d68ac0b1a6844486b48c'
+const STABLE_USER_ID = 'user-cohort-health-monitor'
+const STABLE_SESSION_ID = `session-${AGENT_ID}`
 
 // ===== TYPES =====
 interface Categories {
@@ -500,43 +502,79 @@ export default function Page() {
       return
     }
 
+    const validSheets = settings.sheets.filter(s => s.sheetName.trim())
+    if (validSheets.length === 0) {
+      setError('Please configure at least one sheet tab name in Settings before generating a report.')
+      return
+    }
+
     setLoading(true)
     setError(null)
     setActiveAgentId(AGENT_ID)
 
-    const sheetTabs = settings.sheets
-      .filter(s => s.sheetName.trim())
-      .map((s, i) => `  Tab ${i + 1}: tab_name="${s.sheetName}", range="${s.dataRange}", metric_type="${s.metricType}", label="${s.name}"`)
+    // Build the ranges array for the GOOGLESHEETS_BATCH_GET tool call
+    const rangesArray = validSheets.map(s => `${s.sheetName}!${s.dataRange}`)
+
+    const sheetTabsList = validSheets
+      .map((s, i) => `  ${i + 1}. Tab name: "${s.sheetName}", Range: "${s.dataRange}", Metric type: ${s.metricType}, Label: "${s.name}"`)
       .join('\n')
 
-    const message = `READ DATA from the following Google Spreadsheet and generate a health report.
+    const message = `TASK: Read REAL data from Google Sheets and generate a cohort health report.
 
-Spreadsheet ID: ${spreadsheetId}
+STEP 1: Call GOOGLESHEETS_GET_SPREADSHEET_INFO with:
+  spreadsheet_id: "${spreadsheetId}"
 
-Use GOOGLESHEETS_BATCH_GET to read data from each of these tabs:
-${sheetTabs}
+STEP 2: Call GOOGLESHEETS_BATCH_GET with:
+  spreadsheet_id: "${spreadsheetId}"
+  ranges: ${JSON.stringify(rangesArray)}
 
-Total tabs to read: ${settings.sheets.filter(s => s.sheetName.trim()).length}
+STEP 3: Parse the returned cell data and map it to the health report schema.
 
-Health Thresholds for classification:
-- Onboarding completion threshold: ${settings.onboardingThreshold}%
-- Dashboard access threshold: ${settings.accessThreshold}%
-- Attendance threshold: ${settings.attendanceThreshold}%
-- Session rating threshold: ${settings.ratingThreshold}/5
+Sheet tabs to analyze:
+${sheetTabsList}
 
-IMPORTANT: You MUST use the Google Sheets tool to fetch the ACTUAL data from the spreadsheet. Do NOT generate or fabricate any data. Read each tab, extract the real values, and analyze them.`
+Health Thresholds:
+- Onboarding completion: ${settings.onboardingThreshold}% (below = flagged)
+- Dashboard access: ${settings.accessThreshold}% (below = flagged)
+- Attendance rate: ${settings.attendanceThreshold}% (below = flagged)
+- Session rating: ${settings.ratingThreshold}/5 (below = flagged)
+
+CRITICAL RULES:
+- You MUST call the GOOGLESHEETS tools. Do NOT skip the tool calls.
+- ALL data in the response MUST come from the actual spreadsheet cells.
+- If a tool call fails, set overall_health_score to "ERROR: <reason>" and explain in top_priority_actions.
+- NEVER fabricate or generate sample data.`
 
     try {
-      const result = await callAIAgent(message, AGENT_ID)
+      const result = await callAIAgent(message, AGENT_ID, {
+        user_id: STABLE_USER_ID,
+        session_id: STABLE_SESSION_ID,
+      })
 
       if (result.success && result?.response?.result) {
         const data = result.response.result as ReportData
-        setReportData(data)
-        setLastUpdated(new Date().toLocaleString())
-        setActivePage('dashboard')
+
+        // Check if agent reported an error in the data itself
+        const healthScore = data?.executive_summary?.overall_health_score ?? ''
+        if (healthScore.toUpperCase().startsWith('ERROR')) {
+          const errorActions = Array.isArray(data?.executive_summary?.top_priority_actions)
+            ? data.executive_summary.top_priority_actions.join(' | ')
+            : ''
+          setError(`Agent reported an error accessing the spreadsheet: ${healthScore}. ${errorActions}`)
+          setReportData(null)
+        } else {
+          setReportData(data)
+          setLastUpdated(new Date().toLocaleString())
+          setActivePage('dashboard')
+        }
       } else {
         const errMsg = (result as Record<string, unknown>)?.error as string | undefined
-        setError(errMsg ?? 'Failed to generate report. Please check your settings and try again.')
+        const rawResp = (result as Record<string, unknown>)?.raw_response as string | undefined
+        let detailedError = errMsg ?? 'Failed to generate report. Please check your settings and try again.'
+        if (rawResp && rawResp.length < 500) {
+          detailedError += ` Raw response: ${rawResp}`
+        }
+        setError(detailedError)
       }
     } catch {
       setError('Network error. Please check your connection and try again.')
@@ -637,13 +675,26 @@ IMPORTANT: You MUST use the Google Sheets tool to fetch the ACTUAL data from the
             {/* Error Message */}
             {error && (
               <Card className="border-destructive/50 bg-red-50">
-                <CardContent className="p-4 flex items-start gap-3">
-                  <IoAlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-destructive">Error generating report</p>
-                    <p className="text-xs text-red-600/80 mt-1">{error}</p>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <IoAlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-destructive">Error generating report</p>
+                      <p className="text-xs text-red-600/80 mt-1 break-words">{error}</p>
+                    </div>
+                    <Button variant="ghost" size="sm" className="flex-shrink-0 text-destructive" onClick={() => setError(null)}>Dismiss</Button>
                   </div>
-                  <Button variant="ghost" size="sm" className="ml-auto text-destructive" onClick={() => setError(null)}>Dismiss</Button>
+                  {error.includes('ERROR') && (
+                    <div className="p-3 rounded-lg bg-red-100/50 border border-red-200">
+                      <p className="text-xs font-semibold text-red-700 mb-1">Troubleshooting Steps:</p>
+                      <ul className="text-[11px] text-red-600 space-y-1 list-disc ml-4">
+                        <li>Verify the Spreadsheet ID is correct in Settings</li>
+                        <li>Ensure the Google Sheet is shared (at least view access) with the agent integration</li>
+                        <li>Check that the sheet tab names match exactly (case-sensitive)</li>
+                        <li>Verify the data ranges contain actual data</li>
+                      </ul>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
