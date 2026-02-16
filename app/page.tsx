@@ -46,7 +46,11 @@ import {
   IoLinkOutline,
   IoAdd,
   IoTrashOutline,
-  IoLayersOutline
+  IoLayersOutline,
+  IoCloudOffline,
+  IoKey,
+  IoSearch,
+  IoHelpCircle
 } from 'react-icons/io5'
 
 // ===== CONSTANTS =====
@@ -246,6 +250,86 @@ const METRIC_TYPE_OPTIONS = [
   { value: 'ratings', label: 'Ratings' },
   { value: 'mixed', label: 'Mixed' },
 ]
+
+// ===== ERROR ANALYSIS =====
+interface ErrorAnalysis {
+  category: 'auth' | 'not_found' | 'invalid_range' | 'network' | 'unknown'
+  title: string
+  icon: React.ComponentType<{ className?: string }>
+  steps: string[]
+}
+
+function analyzeError(errorMsg: string): ErrorAnalysis {
+  const lower = errorMsg.toLowerCase()
+
+  if (lower.includes('auth') || lower.includes('oauth') || lower.includes('permission') || lower.includes('access denied') || lower.includes('unauthorized') || lower.includes('forbidden') || lower.includes('credentials') || lower.includes('token')) {
+    return {
+      category: 'auth',
+      title: 'Authentication / Permission Issue',
+      icon: IoKey,
+      steps: [
+        'The agent\'s Google Sheets integration may need re-authentication in Lyzr Studio.',
+        'Ensure the Google Sheet is shared with the agent\'s service account (at least Viewer access).',
+        'If the sheet is private, share it via the Share button in Google Sheets.',
+        'Try generating the report again after sharing the sheet.',
+      ],
+    }
+  }
+
+  if (lower.includes('not found') || lower.includes('404') || lower.includes('does not exist') || lower.includes('no spreadsheet') || lower.includes('invalid spreadsheet')) {
+    return {
+      category: 'not_found',
+      title: 'Spreadsheet Not Found',
+      icon: IoSearch,
+      steps: [
+        'Double-check the Spreadsheet ID in Settings — it must match exactly.',
+        'Verify the Google Sheet has not been deleted or moved to trash.',
+        'Ensure you are using the correct Google account\'s sheet.',
+        'Try pasting the full Google Sheets URL again to re-extract the ID.',
+      ],
+    }
+  }
+
+  if (lower.includes('range') || lower.includes('tab') || lower.includes('sheet name') || lower.includes('invalid') || lower.includes('unable to parse')) {
+    return {
+      category: 'invalid_range',
+      title: 'Invalid Sheet Tab or Range',
+      icon: IoLayersOutline,
+      steps: [
+        'Check that each sheet tab name matches exactly (case-sensitive) in Settings.',
+        'Verify the data ranges (e.g., A1:Z100) are valid and contain data.',
+        'Open the Google Sheet and confirm the tab names at the bottom of the page.',
+        'Remove any tabs in Settings that do not exist in the actual spreadsheet.',
+      ],
+    }
+  }
+
+  if (lower.includes('network') || lower.includes('timeout') || lower.includes('connection') || lower.includes('fetch')) {
+    return {
+      category: 'network',
+      title: 'Network / Connection Error',
+      icon: IoCloudOffline,
+      steps: [
+        'Check your internet connection and try again.',
+        'The Lyzr API or Google Sheets API may be temporarily unavailable.',
+        'Wait a moment and click "Generate Health Report" again.',
+      ],
+    }
+  }
+
+  return {
+    category: 'unknown',
+    title: 'Report Generation Failed',
+    icon: IoHelpCircle,
+    steps: [
+      'Verify the Spreadsheet ID is correct in Settings.',
+      'Ensure the Google Sheet is shared (at least Viewer access) with the agent integration.',
+      'Check that sheet tab names match exactly (case-sensitive).',
+      'Verify the data ranges contain actual data.',
+      'Try generating the report again.',
+    ],
+  }
+}
 
 // ===== HELPERS =====
 function getStatusBadge(status?: string) {
@@ -453,6 +537,8 @@ export default function Page() {
   })
 
   const [settingsSaved, setSettingsSaved] = useState(false)
+  const [testingConnection, setTestingConnection] = useState(false)
+  const [connectionTestResult, setConnectionTestResult] = useState<{ success: boolean; message: string } | null>(null)
 
   const displayData = useMemo<ReportData | null>(() => {
     if (showSampleData) return SAMPLE_DATA
@@ -589,6 +675,48 @@ CRITICAL RULES:
     setTimeout(() => setSettingsSaved(false), 3000)
   }, [])
 
+  const handleTestConnection = useCallback(async () => {
+    const spreadsheetId = settings.sheetId || extractSpreadsheetId(settings.sheetUrl)
+
+    if (!spreadsheetId) {
+      setConnectionTestResult({ success: false, message: 'No Spreadsheet ID configured. Enter a Sheet URL or ID first.' })
+      return
+    }
+
+    setTestingConnection(true)
+    setConnectionTestResult(null)
+
+    try {
+      const result = await callAIAgent(
+        `TEST CONNECTION ONLY. Call GOOGLESHEETS_GET_SPREADSHEET_INFO with spreadsheet_id: "${spreadsheetId}". If successful, respond with the spreadsheet title in overall_health_score field like "Connected: <title>". If it fails, respond with "ERROR: <reason>" in overall_health_score. Do NOT call any other tools. Do NOT generate any metrics data. Only test the connection.`,
+        AGENT_ID,
+        { user_id: STABLE_USER_ID, session_id: STABLE_SESSION_ID }
+      )
+
+      if (result.success && result?.response?.result) {
+        const data = result.response.result as Record<string, unknown>
+        const healthScore = String(data?.overall_health_score ?? data?.text ?? result?.response?.message ?? '')
+
+        if (healthScore.toUpperCase().startsWith('ERROR')) {
+          setConnectionTestResult({ success: false, message: healthScore })
+        } else if (healthScore.toLowerCase().startsWith('connected')) {
+          setConnectionTestResult({ success: true, message: healthScore })
+        } else if (healthScore) {
+          setConnectionTestResult({ success: true, message: `Connected successfully. ${healthScore}` })
+        } else {
+          setConnectionTestResult({ success: true, message: 'Connection test completed. The agent was able to reach the Google Sheets API.' })
+        }
+      } else {
+        const errMsg = (result as Record<string, unknown>)?.error as string | undefined
+        setConnectionTestResult({ success: false, message: errMsg ?? 'Connection test failed. Check your settings.' })
+      }
+    } catch {
+      setConnectionTestResult({ success: false, message: 'Network error during connection test.' })
+    } finally {
+      setTestingConnection(false)
+    }
+  }, [settings, extractSpreadsheetId])
+
   const hasData = displayData !== null
 
   return (
@@ -673,31 +801,61 @@ CRITICAL RULES:
         <ScrollArea className="flex-1">
           <div className="p-6 space-y-6">
             {/* Error Message */}
-            {error && (
-              <Card className="border-destructive/50 bg-red-50">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <IoAlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-destructive">Error generating report</p>
-                      <p className="text-xs text-red-600/80 mt-1 break-words">{error}</p>
+            {error && (() => {
+              const analysis = analyzeError(error)
+              const ErrorIcon = analysis.icon
+              return (
+                <Card className="border-destructive/50 bg-red-50">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <IoAlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-destructive">Error generating report</p>
+                        <p className="text-xs text-red-600/80 mt-1 break-words">{error}</p>
+                      </div>
+                      <Button variant="ghost" size="sm" className="flex-shrink-0 text-destructive" onClick={() => setError(null)}>Dismiss</Button>
                     </div>
-                    <Button variant="ghost" size="sm" className="flex-shrink-0 text-destructive" onClick={() => setError(null)}>Dismiss</Button>
-                  </div>
-                  {error.includes('ERROR') && (
                     <div className="p-3 rounded-lg bg-red-100/50 border border-red-200">
-                      <p className="text-xs font-semibold text-red-700 mb-1">Troubleshooting Steps:</p>
-                      <ul className="text-[11px] text-red-600 space-y-1 list-disc ml-4">
-                        <li>Verify the Spreadsheet ID is correct in Settings</li>
-                        <li>Ensure the Google Sheet is shared (at least view access) with the agent integration</li>
-                        <li>Check that the sheet tab names match exactly (case-sensitive)</li>
-                        <li>Verify the data ranges contain actual data</li>
+                      <div className="flex items-center gap-2 mb-2">
+                        <ErrorIcon className="w-4 h-4 text-red-700" />
+                        <p className="text-xs font-semibold text-red-700">{analysis.title}</p>
+                      </div>
+                      <ul className="text-[11px] text-red-600 space-y-1.5 list-disc ml-4">
+                        {analysis.steps.map((step, i) => (
+                          <li key={i}>{step}</li>
+                        ))}
                       </ul>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+                    {analysis.category === 'auth' && (
+                      <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+                        <div className="flex items-start gap-2">
+                          <IoWarning className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-semibold text-amber-700 mb-1">Quick Fix: Share Your Google Sheet</p>
+                            <ol className="text-[11px] text-amber-600 space-y-1 list-decimal ml-4">
+                              <li>Open your Google Sheet</li>
+                              <li>Click the "Share" button (top-right)</li>
+                              <li>Under "General access", change to "Anyone with the link" as Viewer</li>
+                              <li>Come back here and click "Generate Health Report" again</li>
+                            </ol>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => { setError(null); handleGenerateReport() }}>
+                        <IoRefresh className="w-3.5 h-3.5" />
+                        Retry Report
+                      </Button>
+                      <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => { setError(null); setActivePage('settings') }}>
+                        <IoSettings className="w-3.5 h-3.5" />
+                        Check Settings
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })()}
 
             {/* Loading State */}
             {loading && <LoadingSkeleton />}
@@ -1353,6 +1511,66 @@ CRITICAL RULES:
                       )}
                       {settings.sheetId && (
                         <p className="text-[10px] text-emerald-600 flex items-center gap-1"><IoCheckmarkCircle className="w-3 h-3" />Spreadsheet ID: {settings.sheetId}</p>
+                      )}
+                    </div>
+
+                    <Separator />
+
+                    {/* Test Connection */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium">Connection Test</p>
+                          <p className="text-[10px] text-muted-foreground">Verify the agent can access your Google Sheet before generating a full report.</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 text-xs"
+                          disabled={testingConnection || (!settings.sheetId && !settings.sheetUrl)}
+                          onClick={handleTestConnection}
+                        >
+                          {testingConnection ? (
+                            <IoRefresh className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <IoSearch className="w-3.5 h-3.5" />
+                          )}
+                          {testingConnection ? 'Testing...' : 'Test Connection'}
+                        </Button>
+                      </div>
+
+                      {connectionTestResult && (
+                        <div className={cn(
+                          'p-3 rounded-lg border text-xs',
+                          connectionTestResult.success
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                            : 'bg-red-50 border-red-200 text-red-700'
+                        )}>
+                          <div className="flex items-start gap-2">
+                            {connectionTestResult.success ? (
+                              <IoCheckmarkCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                            ) : (
+                              <IoAlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium">{connectionTestResult.success ? 'Connection Successful' : 'Connection Failed'}</p>
+                              <p className="text-[11px] mt-0.5 break-words opacity-80">{connectionTestResult.message}</p>
+                              {!connectionTestResult.success && (
+                                <div className="mt-2 space-y-1">
+                                  {(() => {
+                                    const analysis = analyzeError(connectionTestResult.message)
+                                    return analysis.steps.slice(0, 3).map((step, i) => (
+                                      <p key={i} className="text-[10px] flex items-start gap-1">
+                                        <span className="flex-shrink-0 w-3.5 h-3.5 rounded-full bg-red-100 text-red-600 text-[8px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
+                                        {step}
+                                      </p>
+                                    ))
+                                  })()}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </div>
                   </CardContent>
